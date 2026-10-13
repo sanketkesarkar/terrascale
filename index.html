@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Sanket Kesarkar’s GCP infrastructure project: Node.js, Terraform, Packer, and an interactive deployment simulation."><title>TerraScale — GCP Infrastructure Automation</title>
+<style>
+  :root {
+    --bg:#F4F7FC;--surface:#FFFFFF;--surface2:#F0F4FB;--border:#DDE4F0;
+    --text:#1A2744;--muted:#6278A0;
+    --blue:#1967D2;--blue-dim:rgba(25,103,210,0.07);--blue-border:rgba(25,103,210,0.2);
+    --green:#1E8C45;--green-dim:rgba(30,140,69,0.07);--green-border:rgba(30,140,69,0.25);
+    --yellow:#F9AB00;--yellow-dim:rgba(249,171,0,0.1);
+    --red:#C5221F;--red-dim:rgba(197,34,31,0.07);
+    --orange:#E37400;
+    --mono:ui-monospace,'Cascadia Code','Fira Code','Consolas',monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.04);
+    --shadow-lg:0 4px 24px rgba(26,39,68,0.10);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+
+  /* ── Nav ── */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;background:rgba(244,247,252,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+  .nav-logo{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;}
+  .logo-box{width:26px;height:26px;border:1.5px solid var(--blue);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--blue);}
+  .nav-links{display:flex;align-items:center;gap:1.5rem;list-style:none;}
+  .nav-links a{color:var(--muted);font-size:13px;text-decoration:none;transition:color .15s;}
+  .nav-links a:hover{color:var(--text);}
+  .nav-gh{color:var(--blue)!important;border:1px solid var(--blue-border);border-radius:5px;padding:5px 12px;background:var(--blue-dim);font-family:var(--mono);font-size:12px;font-weight:600;}
+
+  /* ── Hero ── */
+  .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 2rem 60px;overflow:hidden;}
+  .hero-grid{position:absolute;inset:0;background-image:radial-gradient(circle,#C8D8EE 1px,transparent 1px);background-size:32px 32px;opacity:.5;}
+  .hero-glow{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:600px;height:300px;background:radial-gradient(ellipse,rgba(25,103,210,0.08) 0%,transparent 70%);pointer-events:none;}
+  .hero-content{position:relative;z-index:2;max-width:800px;}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--blue);border:1px solid var(--blue-border);background:var(--blue-dim);border-radius:100px;padding:5px 14px;margin-bottom:28px;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 1px 4px rgba(25,103,210,0.1);}
+  .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);}
+  h1{font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.08;letter-spacing:-.035em;margin-bottom:20px;color:var(--text);text-wrap:balance;}
+  h1 .ac{color:var(--blue);}
+  h1 .ac2{color:var(--green);}
+  .hero-sub{font-size:16px;color:var(--muted);max-width:540px;margin:0 auto 40px;line-height:1.75;}
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:52px;}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid transparent;text-decoration:none;transition:all .15s;line-height:1;}
+  .btn-p{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(25,103,210,0.3);}
+  .btn-p:hover{background:#1558C0;box-shadow:0 4px 16px rgba(25,103,210,0.4);}
+  .btn-g{background:var(--surface);color:var(--text);border-color:var(--border);box-shadow:var(--shadow);}
+  .btn-g:hover{border-color:var(--muted);}
+
+  .metrics-strip{display:flex;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden;max-width:700px;margin:0 auto;box-shadow:var(--shadow);}
+  .mi{flex:1;padding:16px 20px;border-right:1px solid var(--border);text-align:center;}
+  .mi:last-child{border-right:none;}
+  .mv{font-family:var(--mono);font-size:1.4rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:block;}
+  .mv.b{color:var(--blue);}
+  .mv.g{color:var(--green);}
+  .mv.o{color:var(--orange);}
+  .ml{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-top:3px;display:block;}
+
+  hr.d{border:none;border-top:1px solid var(--border);}
+  .section{max-width:980px;margin:0 auto;padding:80px 2rem;}
+  .eyebrow{font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+  .sec-title{font-size:1.75rem;font-weight:700;letter-spacing:-.025em;margin-bottom:8px;color:var(--text);}
+  .sec-desc{color:var(--muted);max-width:520px;margin-bottom:36px;line-height:1.7;}
+
+  /* ── TERRAFORM DEMO ── */
+  .demo-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-lg);}
+  .demo-header{background:var(--surface);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .dh-left{display:flex;align-items:center;gap:10px;}
+  .ddots{display:flex;gap:5px;}
+  .dd{width:10px;height:10px;border-radius:50%;}
+  .dd-r{background:#FF5F57;}.dd-y{background:#FEBC2E;}.dd-g{background:#28C840;}
+  .dh-label{font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+  .dh-tag{font-family:var(--mono);font-size:10px;color:var(--green);border:1px solid var(--green-border);background:var(--green-dim);border-radius:100px;padding:3px 10px;}
+
+  /* Two-pane layout */
+  #demo{max-width:1260px;}
+  .demo-body{display:grid;grid-template-columns:1fr 2fr;min-height:520px;}
+
+  /* Terminal pane */
+  .term-pane{background:#1B2130;padding:20px;font-family:var(--mono);font-size:12px;line-height:1.8;overflow-y:auto;max-height:520px;}
+  .term-prompt{color:#61AFEF;margin-bottom:8px;}
+  .term-prompt span{color:#98C379;}
+  .term-line{opacity:0;transform:translateY(2px);transition:opacity .15s,transform .15s;white-space:pre;}
+  .term-line.show{opacity:1;transform:none;}
+  .t-dim{color:#4B5568;}
+  .t-white{color:#ABB2BF;}
+  .t-green{color:#98C379;}
+  .t-blue{color:#61AFEF;}
+  .t-yellow{color:#E5C07B;}
+  .t-orange{color:#D19A66;}
+  .t-red{color:#E06C75;}
+  .t-bold{font-weight:700;}
+  .term-cursor{display:inline-block;width:8px;height:14px;background:#ABB2BF;animation:blink 1.1s infinite;vertical-align:middle;margin-left:2px;border-radius:1px;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+  /* Architecture pane */
+  .arch-pane{background:var(--surface2);padding:24px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:0;}
+  .arch-title{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:16px;}
+  .arch-svg-wrap{flex:1;display:flex;align-items:center;justify-content:center;}
+
+  /* Resource nodes in SVG */
+  .res-node{transition:all .4s;}
+  .res-node rect{transition:all .4s;}
+  .res-node text{transition:all .4s;}
+
+  /* Demo footer */
+  .demo-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-wrap:wrap;gap:12px;}
+  .demo-status{font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .demo-status.running{color:var(--blue);}
+  .demo-status.done{color:var(--green);}
+  #tf-btn{font-family:var(--mono);font-size:12px;font-weight:700;padding:9px 20px;border-radius:6px;border:1px solid var(--blue-border);background:var(--blue-dim);color:var(--blue);cursor:pointer;transition:all .15s;}
+  #tf-btn:hover{background:rgba(25,103,210,.15);}
+  #tf-btn:disabled{opacity:.4;cursor:not-allowed;}
+  #tf-reset{font-family:var(--mono);font-size:12px;padding:9px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+  #tf-reset:hover{border-color:var(--muted);color:var(--text);}
+
+  /* ── Resources list ── */
+  .res-list{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
+  .res{background:var(--surface);padding:24px 22px;transition:background .2s;}
+  .res:hover{background:var(--surface2);}
+  .res-icon{font-size:22px;margin-bottom:10px;}
+  .res-name{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:5px;}
+  .res-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+  .res-tag{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--blue);background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:3px;padding:1px 6px;margin-bottom:8px;}
+
+  .stack-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:5px 12px;background:var(--surface);transition:border-color .15s,color .15s;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+  .chip:hover{border-color:var(--blue-border);color:var(--blue);}
+
+  .cta{text-align:center;padding:80px 2rem;max-width:900px;margin:0 auto;}
+  .cta h2{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin-bottom:12px;color:var(--text);}
+  .cta p{color:var(--muted);margin-bottom:28px;}
+  footer{border-top:1px solid var(--border);padding:20px 2rem;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;justify-content:center;gap:16px;}
+  footer a{color:var(--muted);text-decoration:none;}
+  footer a:hover{color:var(--blue);}
+
+  @media(max-width:720px){
+    .demo-body{grid-template-columns:1fr;}
+    .arch-pane{display:none;}
+    .res-list{grid-template-columns:1fr;}
+  }
+
+html{scroll-behavior:smooth;scroll-padding-top:75px}
+a:focus-visible,button:focus-visible{outline:3px solid #E37400;outline-offset:4px}
+.term-line{white-space:pre-wrap;overflow-wrap:anywhere}
+.term-pane{color:#ABB2BF}.t-dim{color:#94A0B5}
+.simulation-note{font-size:12px;color:var(--muted);padding:12px 18px;background:var(--surface);border-bottom:1px solid var(--border)}
+.private-note{font-size:12px;color:var(--muted);margin-top:16px}
+@media(max-width:720px){nav{padding:0 15px}.nav-links{gap:12px}.nav-links a{font-size:11px}.metrics-strip{flex-wrap:wrap}.mi{flex:1 1 50%;border-bottom:1px solid var(--border)}.arch-pane{display:flex;border-left:0;border-top:1px solid var(--border);padding:18px}.term-pane{max-height:360px}.hero{padding:100px 20px 50px}.demo-header{flex-wrap:wrap;gap:8px}.dh-label{font-size:10px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body>
+
+<nav>
+  <div class="nav-logo"><div class="logo-box">☁</div>TerraScale</div>
+  <ul class="nav-links">
+    <li><a href="#demo">Deploy</a></li>
+    <li><a href="#resources">Resources</a></li>
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="https://github.com/orgs/csye6225-sanket/repositories" class="nav-gh">↗ Repositories</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="badge"><div class="badge-dot"></div>GCP · Terraform · Node.js</div>
+    <h1>Full-stack cloud<br><span class="ac">infrastructure</span>,<br><span class="ac2">provisioned in code.</span></h1>
+    <p class="hero-sub">Node.js REST API, Cloud SQL, serverless event pipeline, and complete GCP networking — all defined in Terraform and repeatable from scratch.</p>
+    <div class="actions">
+      <a href="#demo" class="btn btn-p">↓ Explore the deployment simulation</a>
+      <a href="https://github.com/orgs/csye6225-sanket/repositories" class="btn btn-g">Project repositories</a>
+    </div>
+    <div class="metrics-strip">
+<div class="mi"><span class="mv b">GCP</span><span class="ml">Cloud platform</span></div>
+<div class="mi"><span class="mv g">Terraform</span><span class="ml">Infrastructure as code</span></div>
+<div class="mi"><span class="mv o">Node.js</span><span class="ml">REST API</span></div>
+<div class="mi"><span class="mv b">Packer</span><span class="ml">Machine images</span></div>
+</div><p class="private-note">Built by Sanket Kesarkar · Application repositories are currently private.</p>
+</div></section>
+
+<hr class="d">
+
+<section class="section" id="demo">
+  <div class="eyebrow">// deployment pipeline</div>
+  <h2 class="sec-title">Explore the path from code to cloud</h2>
+  <p class="sec-desc">Follow an illustrative walkthrough of source code, image building, infrastructure provisioning, and the application’s GCP services.</p>
+
+  <div class="demo-wrap">
+    <div class="demo-header">
+      <div class="dh-left">
+        <div class="ddots"><div class="dd dd-r"></div><div class="dd dd-y"></div><div class="dd dd-g"></div></div>
+        <div class="dh-label">deploy · webapp · tf-gcp-infra · serverless</div>
+      </div>
+      <div class="dh-tag">Simulation</div>
+    </div>
+
+    <div class="simulation-note"><strong>Browser simulation</strong> · Illustrative output and timings. No commands execute and no cloud resources are created.</div><div class="demo-body">
+      <!-- Terminal -->
+      <div class="term-pane" id="term">
+        <div class="term-prompt">sanketkesarkar@Mac terrascale % <span>git push origin main</span></div>
+        <div id="term-lines"></div>
+        <span class="term-cursor" id="cursor"></span>
+      </div>
+
+      <!-- Architecture diagram -->
+      <div class="arch-pane">
+        <div class="arch-title">Code → Build → Cloud</div>
+        <div class="arch-svg-wrap">
+          <svg id="arch-svg" viewBox="0 0 490 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:490px;">
+            <defs>
+              <filter id="node-shadow" x="-10%" y="-10%" width="120%" height="130%">
+                <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="rgba(26,39,68,0.07)"/>
+              </filter>
+              <marker id="arr-muted"  markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,1 L4,3.5 L0,6" fill="none" stroke="#C8D4E8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker>
+              <marker id="arr-blue"   markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,1 L4,3.5 L0,6" fill="none" stroke="#1967D2" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker>
+              <marker id="arr-green"  markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,1 L4,3.5 L0,6" fill="none" stroke="#1E8C45" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker>
+              <marker id="arr-orange" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,1 L4,3.5 L0,6" fill="none" stroke="#E37400" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker>
+              <marker id="arr-purple" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,1 L4,3.5 L0,6" fill="none" stroke="#7B42BC" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker>
+              <marker id="arr-teal"   markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,1 L4,3.5 L0,6" fill="none" stroke="#009FAE" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></marker>
+              <!-- ── Zone 1 (CI/CD) clip paths ── -->
+              <clipPath id="cp-webapp" ><rect x="6"   y="6"  width="106" height="26" rx="5"/></clipPath>
+              <clipPath id="cp-tf-repo"><rect x="6"   y="36" width="106" height="26" rx="5"/></clipPath>
+              <clipPath id="cp-srv"    ><rect x="6"   y="66" width="106" height="26" rx="5"/></clipPath>
+              <clipPath id="cp-packer" ><rect x="130" y="6"  width="116" height="50" rx="6"/></clipPath>
+              <clipPath id="cp-tfbuild"><rect x="130" y="60" width="116" height="50" rx="6"/></clipPath>
+              <!-- ── Zone 2 (Runtime) clip paths ── -->
+              <clipPath id="cp-lb"     ><rect x="58"  y="254" width="96"  height="72" rx="7"/></clipPath>
+              <clipPath id="cp-ce"     ><rect x="172" y="200" width="166" height="180" rx="8"/></clipPath>
+              <clipPath id="cp-sql"    ><rect x="354" y="200" width="126" height="48" rx="6"/></clipPath>
+              <clipPath id="cp-st"     ><rect x="354" y="256" width="126" height="48" rx="6"/></clipPath>
+              <clipPath id="cp-ps"     ><rect x="354" y="318" width="126" height="56" rx="6"/></clipPath>
+              <clipPath id="cp-fn"     ><rect x="354" y="390" width="126" height="42" rx="6"/></clipPath>
+            </defs>
+
+            <!-- ════════════════════════════════════════════════ -->
+            <!--   ZONE 1 — CI/CD PIPELINE (compact strip)       -->
+            <!-- ════════════════════════════════════════════════ -->
+            <rect x="0" y="0" width="490" height="114" rx="0" fill="rgba(248,250,255,0.85)"/>
+
+            <!-- Zone 1 column labels -->
+            <text x="59"  y="7" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#C0CAD8" letter-spacing=".12em">SOURCE</text>
+            <text x="188" y="7" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#C0CAD8" letter-spacing=".12em">BUILD PIPELINE</text>
+            <text x="320" y="7" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#C0CAD8" letter-spacing=".12em">GCP CLOUD</text>
+            <line x1="118" y1="10" x2="118" y2="113" stroke="#EDF0F7" stroke-width="1"/>
+            <line x1="256" y1="10" x2="256" y2="113" stroke="#EDF0F7" stroke-width="1"/>
+
+            <!-- Zone 1: repo → GH connectors (behind nodes) -->
+            <path id="c-webapp-gh" d="M59,32 L59,96"  stroke="#C8D4E8" stroke-width="1" fill="none" style="transition:stroke .4s"/>
+            <path id="c-tf-gh"     d="M59,62 L59,96"  stroke="#C8D4E8" stroke-width="1" fill="none" style="transition:stroke .4s"/>
+            <path id="c-srv-gh"    d="M59,92 L59,96"  stroke="#C8D4E8" stroke-width="1" fill="none" style="transition:stroke .4s"/>
+
+            <!-- webapp repo -->
+            <g id="n-webapp" opacity="0.18" style="transition:opacity .5s">
+              <rect x="6" y="6" width="106" height="26" rx="5" fill="white" stroke="#DDE8F8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="6" y="6" width="14" height="26" fill="#1967D2" clip-path="url(#cp-webapp)"/>
+              <text x="13" y="23" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="white" font-weight="700">JS</text>
+              <text x="26" y="18" font-family="ui-monospace,monospace" font-size="7.5" fill="#1967D2" font-weight="700">webapp</text>
+              <text x="26" y="28" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">Node.js · MySQL</text>
+            </g>
+
+            <!-- tf-gcp-infra repo -->
+            <g id="n-tf-repo" opacity="0.18" style="transition:opacity .5s">
+              <rect x="6" y="36" width="106" height="26" rx="5" fill="white" stroke="#E4D8F5" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="6" y="36" width="14" height="26" fill="#7B42BC" clip-path="url(#cp-tf-repo)"/>
+              <text x="13" y="53" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="white" font-weight="700">◈</text>
+              <text x="26" y="48" font-family="ui-monospace,monospace" font-size="7.5" fill="#7B42BC" font-weight="700">tf-gcp-infra</text>
+              <text x="26" y="58" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">Terraform HCL</text>
+            </g>
+
+            <!-- serverless repo -->
+            <g id="n-srv" opacity="0.18" style="transition:opacity .5s">
+              <rect x="6" y="66" width="106" height="26" rx="5" fill="white" stroke="#FCDDB8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="6" y="66" width="14" height="26" fill="#E37400" clip-path="url(#cp-srv)"/>
+              <text x="13" y="83" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="white" font-weight="700">λ</text>
+              <text x="26" y="78" font-family="ui-monospace,monospace" font-size="7.5" fill="#E37400" font-weight="700">serverless</text>
+              <text x="26" y="88" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">Cloud Functions src</text>
+            </g>
+
+            <!-- GitHub Actions pill -->
+            <g id="n-gh" opacity="0.18" style="transition:opacity .5s">
+              <rect x="6" y="96" width="106" height="17" rx="8.5" fill="#24292F" stroke="#444D57" stroke-width="1"/>
+              <text x="59" y="108" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="white" font-weight="600">▶ GitHub Actions</text>
+            </g>
+
+            <!-- Zone 1: GH → Build connectors -->
+            <path id="c-gh-packer" d="M112,104 L120,104 L120,31 L130,31" stroke="#C8D4E8" stroke-width="1.1" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <path id="c-gh-tf"     d="M112,104 L120,104 L120,85 L130,85" stroke="#C8D4E8" stroke-width="1.1" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+
+            <!-- Packer Build -->
+            <g id="n-packer" opacity="0.18" style="transition:opacity .5s">
+              <rect x="130" y="6" width="116" height="50" rx="6" fill="white" stroke="#A8E2E8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="130" y="6" width="18" height="50" fill="#009FAE" clip-path="url(#cp-packer)"/>
+              <text x="139" y="34" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="white" font-weight="700">◉</text>
+              <text x="155" y="20" font-family="ui-monospace,monospace" font-size="8" fill="#009FAE" font-weight="700">Packer Build</text>
+              <text x="155" y="31" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">bakes Node.js VM image</text>
+              <text x="155" y="42" font-family="ui-monospace,monospace" font-size="6" fill="#9CAEC9">→ gcp-webapp-img-v1</text>
+            </g>
+
+            <!-- Terraform Apply -->
+            <g id="n-tfbuild" opacity="0.18" style="transition:opacity .5s">
+              <rect x="130" y="60" width="116" height="50" rx="6" fill="white" stroke="#D5C4EE" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="130" y="60" width="18" height="50" fill="#7B42BC" clip-path="url(#cp-tfbuild)"/>
+              <text x="139" y="88" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="white" font-weight="700">◈</text>
+              <text x="155" y="74" font-family="ui-monospace,monospace" font-size="8" fill="#7B42BC" font-weight="700">Terraform Apply</text>
+              <text x="155" y="85" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">provisions infrastructure</text>
+              <text x="155" y="96" font-family="ui-monospace,monospace" font-size="6" fill="#9CAEC9">auto-approve · us-east1</text>
+            </g>
+
+            <!-- Packer → CE image path: routes left of build column to avoid overlap -->
+            <path id="c-packer-ce" d="M130,31 L122,31 L122,210 L172,210" stroke="#C8D4E8" stroke-width="1" stroke-dasharray="4,3" fill="none" style="transition:stroke .4s"/>
+            <text id="packer-img-label" x="115" y="128" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#C8D4E8" transform="rotate(-90,115,128)" style="transition:fill .4s">img</text>
+
+            <!-- Terraform → GCP (short connector + badge) -->
+            <path id="c-tf-gcp" d="M246,85 L258,85" stroke="#C8D4E8" stroke-width="1.1" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <rect x="260" y="60" width="108" height="48" rx="6" fill="rgba(240,244,251,0.6)" stroke="#DDE4F0" stroke-width="1" stroke-dasharray="4,3"/>
+            <text x="268" y="76" font-family="ui-monospace,monospace" font-size="7.5" fill="#6278A0">☁ GCP Cloud</text>
+            <text x="268" y="88" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">8 resources · us-east1</text>
+            <text x="268" y="100" font-family="ui-monospace,monospace" font-size="7" fill="#1E8C45">✓ Deployed</text>
+
+            <!-- ════════════════════════════════════════════════ -->
+            <!--   ZONE SEPARATOR                                 -->
+            <!-- ════════════════════════════════════════════════ -->
+            <line x1="0" y1="116" x2="490" y2="116" stroke="#E4EAF5" stroke-width="1"/>
+            <text x="6" y="128" font-family="ui-monospace,monospace" font-size="7" fill="#9CAEC9" letter-spacing=".06em">// RUNTIME · how a request flows through the system</text>
+
+            <!-- ════════════════════════════════════════════════ -->
+            <!--   ZONE 2 — LIVE REQUEST FLOW                    -->
+            <!-- ════════════════════════════════════════════════ -->
+
+            <!-- GCP cloud boundary -->
+            <rect id="vpc-box" x="52" y="170" width="432" height="264" rx="10" fill="rgba(240,244,251,0.5)" stroke="#DDE4F0" stroke-width="1.5" stroke-dasharray="5,3"/>
+            <text x="62" y="183" font-family="ui-monospace,monospace" font-size="7" fill="#B8C4D6">☁ GCP · us-east1</text>
+
+            <!-- ── USER PERSONA (outside GCP, always visible) ── -->
+            <circle cx="26" cy="290" r="17" fill="#EBF2FD" stroke="#1967D2" stroke-width="1.5"/>
+            <circle cx="26" cy="283" r="7"  fill="#1967D2"/>
+            <path d="M13,303 C13,293 39,293 39,303" fill="#1967D2"/>
+            <text x="26" y="316" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="#6278A0" font-weight="600">USER</text>
+            <text x="26" y="326" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#9CAEC9">browser</text>
+
+            <!-- User → LB static path -->
+            <path d="M43,290 L58,290" stroke="#BDD3F5" stroke-width="1.3" fill="none" marker-end="url(#arr-muted)"/>
+            <text x="50" y="283" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">HTTPS</text>
+
+            <!-- ── ZONE 2 INTERNAL CONNECTORS (behind nodes) ── -->
+            <!-- LB → CE -->
+            <path id="c-lb-ce"  d="M154,290 L172,290" stroke="#C8D4E8" stroke-width="1.3" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <text x="163" y="283" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#B8C4D6">route</text>
+
+            <!-- CE → SQL (sync) -->
+            <path id="c-ce-sql" d="M338,224 L354,224" stroke="#C8D4E8" stroke-width="1.3" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <text x="346" y="218" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#B8C4D6">① query</text>
+
+            <!-- CE → Storage (sync) -->
+            <path id="c-ce-st"  d="M338,280 L354,280" stroke="#C8D4E8" stroke-width="1.3" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <text x="346" y="274" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#B8C4D6">② files</text>
+
+            <!-- CE → PubSub (async, dashed) -->
+            <path id="c-ce-ps"  d="M338,346 L354,346" stroke="#C8D4E8" stroke-width="1.2" stroke-dasharray="5,4" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <text id="async-label" x="346" y="340" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#B8C4D6" style="transition:fill .4s">③ async</text>
+
+            <!-- PubSub → Functions -->
+            <path id="c-ps-fn"  d="M417,374 L417,390" stroke="#C8D4E8" stroke-width="1.3" fill="none" marker-end="url(#arr-muted)" style="transition:stroke .4s"/>
+            <text x="424" y="382" font-family="ui-monospace,monospace" font-size="6" fill="#B8C4D6">④ trigger</text>
+
+            <!-- ── LOAD BALANCER ── -->
+            <g id="n-lb" opacity="0.18" style="transition:opacity .5s">
+              <rect x="58" y="254" width="96" height="72" rx="7" fill="white" stroke="#C5D9F8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="58" y="254" width="18" height="72" fill="#1967D2" clip-path="url(#cp-lb)"/>
+              <text x="67" y="292" text-anchor="middle" font-family="system-ui" font-size="13" fill="white">⚡</text>
+              <text x="84" y="272" font-family="ui-monospace,monospace" font-size="8" fill="#1967D2" font-weight="700">Load Balancer</text>
+              <text x="84" y="283" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">HTTPS · SSL term.</text>
+              <text x="84" y="293" font-family="ui-monospace,monospace" font-size="6.5" fill="#6278A0">anycast IP routing</text>
+              <text x="84" y="303" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">terrascale.app</text>
+              <text x="84" y="313" font-family="ui-monospace,monospace" font-size="6" fill="#9CAEC9">health checks</text>
+            </g>
+
+            <!-- ── COMPUTE ENGINE (the big one — heart of the app) ── -->
+            <g id="n-ce" opacity="0.18" style="transition:opacity .5s">
+              <rect x="172" y="200" width="166" height="180" rx="8" fill="white" stroke="#C5D9F8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="172" y="200" width="24" height="180" fill="#1967D2" clip-path="url(#cp-ce)"/>
+              <text x="184" y="292" text-anchor="middle" font-family="system-ui" font-size="16" fill="white">⚙</text>
+              <text x="206" y="220" font-family="ui-monospace,monospace" font-size="9" fill="#1967D2" font-weight="700">Compute Engine</text>
+              <text x="206" y="234" font-family="ui-monospace,monospace" font-size="7.5" fill="#6278A0">Node.js 20 · Express API</text>
+              <text x="206" y="246" font-family="ui-monospace,monospace" font-size="7" fill="#6278A0">Sequelize ORM · REST routes</text>
+              <text x="206" y="257" font-family="ui-monospace,monospace" font-size="7" fill="#9CAEC9">session auth · middleware</text>
+              <line x1="206" y1="266" x2="330" y2="266" stroke="#EDF1F7" stroke-width="1"/>
+              <text x="206" y="279" font-family="ui-monospace,monospace" font-size="7" fill="#9CAEC9">handles: signup · login</text>
+              <text x="206" y="290" font-family="ui-monospace,monospace" font-size="7" fill="#9CAEC9">CRUD · file upload · events</text>
+              <text x="206" y="302" font-family="ui-monospace,monospace" font-size="7" fill="#9CAEC9">reads SQL · writes Storage</text>
+              <text x="206" y="313" font-family="ui-monospace,monospace" font-size="7" fill="#9CAEC9">publishes to Pub/Sub async</text>
+              <line x1="206" y1="322" x2="330" y2="322" stroke="#EDF1F7" stroke-width="1"/>
+              <!-- Packer image badge at bottom of CE -->
+              <rect x="206" y="330" width="122" height="18" rx="4" fill="#F0F9F3" stroke="#BBDFC8" stroke-width="1"/>
+              <text x="267" y="342" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6.5" fill="#1E8C45">📦 gcp-webapp-img-v1</text>
+              <text x="206" y="366" font-family="ui-monospace,monospace" font-size="6.5" fill="#B8C4D6">e2-medium · 2 vCPU · 4 GB</text>
+            </g>
+
+            <!-- ── CLOUD SQL ── -->
+            <g id="n-sql" opacity="0.18" style="transition:opacity .5s">
+              <rect x="354" y="200" width="126" height="48" rx="6" fill="white" stroke="#BBDFC8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="354" y="200" width="18" height="48" fill="#1E8C45" clip-path="url(#cp-sql)"/>
+              <text x="363" y="226" text-anchor="middle" font-family="system-ui" font-size="13" fill="white">🗄</text>
+              <text x="380" y="215" font-family="ui-monospace,monospace" font-size="8.5" fill="#1E8C45" font-weight="700">Cloud SQL</text>
+              <text x="380" y="226" font-family="ui-monospace,monospace" font-size="7" fill="#6278A0">MySQL 8.0 · Private IP</text>
+              <text x="380" y="237" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">users · sessions · data</text>
+            </g>
+
+            <!-- ── CLOUD STORAGE ── -->
+            <g id="n-storage" opacity="0.18" style="transition:opacity .5s">
+              <rect x="354" y="256" width="126" height="48" rx="6" fill="white" stroke="#BBDFC8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="354" y="256" width="18" height="48" fill="#1E8C45" clip-path="url(#cp-st)"/>
+              <text x="363" y="282" text-anchor="middle" font-family="system-ui" font-size="13" fill="white">🪣</text>
+              <text x="380" y="271" font-family="ui-monospace,monospace" font-size="8.5" fill="#1E8C45" font-weight="700">Cloud Storage</text>
+              <text x="380" y="282" font-family="ui-monospace,monospace" font-size="7" fill="#6278A0">GCS · object store</text>
+              <text x="380" y="293" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">uploads · static assets</text>
+            </g>
+
+            <!-- ── CLOUD PUB/SUB ── -->
+            <g id="n-pubsub" opacity="0.18" style="transition:opacity .5s">
+              <rect x="354" y="318" width="126" height="56" rx="6" fill="white" stroke="#F5C87A" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="354" y="318" width="18" height="56" fill="#E37400" clip-path="url(#cp-ps)"/>
+              <text x="363" y="348" text-anchor="middle" font-family="system-ui" font-size="13" fill="white">📨</text>
+              <text x="380" y="333" font-family="ui-monospace,monospace" font-size="8.5" fill="#E37400" font-weight="700">Cloud Pub/Sub</text>
+              <text x="380" y="344" font-family="ui-monospace,monospace" font-size="7" fill="#6278A0">async event pipeline</text>
+              <text x="380" y="355" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">decouples CE from Fn</text>
+              <text x="380" y="365" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">at-least-once · durable</text>
+            </g>
+
+            <!-- ── CLOUD FUNCTIONS ── -->
+            <g id="n-fn" opacity="0.18" style="transition:opacity .5s">
+              <rect x="354" y="390" width="126" height="42" rx="6" fill="white" stroke="#C5D9F8" stroke-width="1.5" filter="url(#node-shadow)"/>
+              <rect x="354" y="390" width="18" height="42" fill="#1967D2" clip-path="url(#cp-fn)"/>
+              <text x="363" y="413" text-anchor="middle" font-family="system-ui" font-size="14" fill="white">λ</text>
+              <text x="380" y="406" font-family="ui-monospace,monospace" font-size="8.5" fill="#1967D2" font-weight="700">Cloud Functions</text>
+              <text x="380" y="417" font-family="ui-monospace,monospace" font-size="7" fill="#6278A0">Pub/Sub triggered</text>
+              <text x="380" y="427" font-family="ui-monospace,monospace" font-size="6.5" fill="#9CAEC9">serverless handler</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-footer">
+      <span class="demo-status" id="tf-status">Ready — explore the simulated deployment</span>
+      <div style="display:flex;gap:10px;">
+        <button id="tf-reset" onclick="resetTf()">↺ Reset</button>
+        <button id="tf-btn" onclick="runTf()">▶ Run simulation</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="d">
+
+<section class="section" id="resources">
+  <div class="eyebrow">// infrastructure</div>
+  <h2 class="sec-title">Every resource, defined in code</h2>
+  <p class="sec-desc">Three repos working together — Terraform provisions the cloud, Node.js runs the API, serverless handles async events.</p>
+  <div class="res-list">
+    <div class="res">
+      <div class="res-tag">networking</div>
+      <div class="res-icon">🌐</div>
+      <div class="res-name">VPC + Cloud DNS</div>
+      <div class="res-desc">Custom VPC, subnets, firewall rules, and DNS configuration for the application.</div>
+    </div>
+    <div class="res">
+      <div class="res-tag">compute</div>
+      <div class="res-icon">⚙️</div>
+      <div class="res-name">Compute Engine</div>
+      <div class="res-desc">Node.js REST API on Compute Engine with Sequelize ORM, auto-startup scripts, and HTTP load balancer.</div>
+    </div>
+    <div class="res">
+      <div class="res-tag">database</div>
+      <div class="res-icon">🗄️</div>
+      <div class="res-name">Cloud SQL</div>
+      <div class="res-desc">Managed MySQL database connected through private networking to the application tier.</div>
+    </div>
+    <div class="res">
+      <div class="res-tag">storage</div>
+      <div class="res-icon">🪣</div>
+      <div class="res-name">Cloud Storage</div>
+      <div class="res-desc">Object storage for application assets and deployment artifacts.</div>
+    </div>
+    <div class="res">
+      <div class="res-tag">messaging</div>
+      <div class="res-icon">📨</div>
+      <div class="res-name">Cloud Pub/Sub</div>
+      <div class="res-desc">Async event pipeline between the REST API and serverless functions. Decoupled, scalable messaging.</div>
+    </div>
+    <div class="res">
+      <div class="res-tag">serverless</div>
+      <div class="res-icon">λ</div>
+      <div class="res-name">Cloud Functions</div>
+      <div class="res-desc">Event-triggered serverless functions subscribed to Pub/Sub topics for background processing.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="d">
+
+<section class="section" id="stack">
+  <div class="eyebrow">// built with</div>
+  <h2 class="sec-title">Stack</h2>
+  <p class="sec-desc" style="margin-bottom:24px;">GCP-native services, Terraform IaC, Node.js application layer.</p>
+  <div class="stack-grid">
+    <span class="chip">Node.js</span>
+    <span class="chip">Terraform</span>
+    <span class="chip">Google Cloud Platform</span>
+    <span class="chip">Compute Engine</span>
+    <span class="chip">Cloud SQL (MySQL)</span>
+    <span class="chip">Cloud DNS</span>
+    <span class="chip">Cloud Storage</span>
+    <span class="chip">Cloud Pub/Sub</span>
+    <span class="chip">Cloud Functions</span>
+    <span class="chip">Cloud Monitoring</span>
+    <span class="chip">Sequelize ORM</span>
+    <span class="chip">GitHub Actions</span>
+    <span class="chip">Packer</span>
+  </div>
+</section>
+
+<hr class="d">
+
+<section class="cta">
+  <h2>Repeatable from scratch.</h2>
+  <p>Clone the repos, set your GCP project ID, run <code style="font-family:var(--mono);background:var(--blue-dim);padding:2px 6px;border-radius:3px;color:var(--blue);">terraform apply</code> — everything provisions automatically.</p>
+  <a href="https://github.com/orgs/csye6225-sanket/repositories" class="btn btn-p">View on GitHub ↗</a>
+</section>
+
+<footer>
+  <span>Built by <a href="https://github.com/sanketkesarkar">Sanket Kesarkar</a></span>
+  <span>·</span><span>GCP · Terraform · Node.js</span><span>·</span>
+  <a href="https://github.com/orgs/csye6225-sanket/repositories">GitHub</a>
+</footer>
+
+<script>
+// ── Full deployment pipeline: git push → packer build → terraform apply ──
+const TF_LINES = [
+  {t:0,    cls:'t-dim',         text:'Enumerating objects: 12, done.'},
+  {t:300,  cls:'t-dim',         text:'  main → main  (github.com:csye6225-sanket/tf-gcp-infra)'},
+  {t:500,  cls:'t-dim',         text:''},
+  {t:600,  cls:'t-yellow',      text:'[Simulation] GitHub Actions workflow triggered', se:'gh'},
+  {t:800,  cls:'t-dim',         text:'  ▸ Build & Deploy to GCP · 3 jobs'},
+  {t:900,  cls:'t-dim',         text:''},
+
+  // Packer build
+  {t:1000, cls:'t-blue t-bold', text:'── [1/3] packer build webapp.pkr.hcl ──', se:'packer'},
+  {t:1200, cls:'t-yellow',      text:'==> gcp: Starting build: gcp-webapp-image'},
+  {t:1500, cls:'t-dim',         text:'    gcp: Launching source Compute Engine...'},
+  {t:2000, cls:'t-green',       text:'    gcp: Installing Node.js 20.x LTS'},
+  {t:2500, cls:'t-green',       text:'    gcp: npm ci  →  application dependencies installed'},
+  {t:3000, cls:'t-green',       text:'    gcp: Application bundle built.'},
+  {t:3500, cls:'t-yellow',      text:'==> gcp: Creating machine image from disk...'},
+  {t:4100, cls:'t-green t-bold',text:'==> gcp: Build complete: gcp-webapp-img-v1  ✓'},
+  {t:4300, cls:'t-dim',         text:''},
+
+  // Terraform apply
+  {t:4500, cls:'t-blue t-bold', text:'── [2/3] terraform apply -auto-approve ──', se:'tf'},
+  {t:4700, cls:'t-dim',         text:'Illustrative plan: networking, compute, database and events.'},
+  {t:4900, cls:'t-dim',         text:''},
+  {t:5000, cls:'t-yellow',      text:'google_compute_network.vpc_network: Creating...'},
+  {t:5600, cls:'t-green',       text:'google_compute_network.vpc_network: Created [3s]'},
+  {t:5800, cls:'t-yellow',      text:'google_dns_managed_zone.primary: Creating...'},
+  {t:6300, cls:'t-green',       text:'google_dns_managed_zone.primary: Created [2s]'},
+  {t:6500, cls:'t-yellow',      text:'google_compute_instance.webapp: Creating...'},
+  {t:7400, cls:'t-green',       text:'google_compute_instance.webapp: Created [9s]', node:'n-ce', activate:true},
+  {t:7700, cls:'t-yellow',      text:'google_sql_database_instance.mysql: Creating...'},
+  {t:8700, cls:'t-green',       text:'google_sql_database_instance.mysql: Created [12s]', node:'n-sql', activate:true},
+  {t:9000, cls:'t-yellow',      text:'google_storage_bucket.assets: Creating...'},
+  {t:9500, cls:'t-green',       text:'google_storage_bucket.assets: Created [2s]', node:'n-storage', activate:true},
+  {t:9700, cls:'t-yellow',      text:'google_pubsub_topic.events: Creating...'},
+  {t:10100,cls:'t-green',       text:'google_pubsub_topic.events: Created [1s]', node:'n-pubsub', activate:true},
+  {t:10300,cls:'t-yellow',      text:'google_cloudfunctions2_function.handler: Creating...'},
+  {t:11100,cls:'t-green',       text:'google_cloudfunctions2_function.handler: Created [8s]', node:'n-fn', activate:true},
+  {t:11300,cls:'t-dim',         text:''},
+  {t:11500,cls:'t-green t-bold',text:'Illustrative apply complete.'},
+  {t:11700,cls:'t-dim',         text:''},
+
+  // Done
+  {t:11900,cls:'t-blue t-bold', text:'── [3/3] Deployment complete ──────────────'},
+  {t:12100,cls:'t-green',       text:'✓  webapp      →  sample HTTPS application endpoint'},
+  {t:12300,cls:'t-green',       text:'✓  functions   →  active (Pub/Sub trigger)'},
+  {t:12500,cls:'t-green',       text:'✓  db          →  10.0.1.5:3306 (private)'},
+  {t:12700,cls:'t-green',       text:'✓  Illustrative deployment walkthrough complete'},
+];
+
+const NODE_STROKES = {
+  'n-webapp':'#DDE8F8','n-tf-repo':'#E4D8F5','n-srv':'#FCDDB8',
+  'n-gh':'#444D57',
+  'n-packer':'#A8E2E8','n-tfbuild':'#D5C4EE',
+  'n-lb':'#C5D9F8','n-ce':'#C5D9F8',
+  'n-sql':'#BBDFC8','n-storage':'#BBDFC8',
+  'n-pubsub':'#F5C87A','n-fn':'#C5D9F8',
+};
+const NODE_COLORS = {
+  'n-webapp':'#1967D2','n-tf-repo':'#7B42BC','n-srv':'#E37400',
+  'n-gh':'#24292F',
+  'n-packer':'#009FAE','n-tfbuild':'#7B42BC',
+  'n-lb':'#1967D2','n-ce':'#1967D2',
+  'n-sql':'#1E8C45','n-storage':'#1E8C45',
+  'n-pubsub':'#E37400','n-fn':'#1967D2',
+};
+
+function activateNode(id) {
+  const g = document.getElementById(id);
+  if (!g) return;
+  g.setAttribute('opacity', '1');
+  const mainRect = g.querySelector('rect');
+  if (mainRect && NODE_COLORS[id]) {
+    mainRect.setAttribute('stroke', NODE_COLORS[id]);
+    mainRect.setAttribute('stroke-width', '2');
+  }
+  // GCP internal connections
+  if (id === 'n-ce') {
+    const el = document.getElementById('c-lb-ce');
+    if (el) { el.setAttribute('stroke','#1967D2'); el.setAttribute('stroke-width','1.8'); el.setAttribute('marker-end','url(#arr-blue)'); }
+    const ep = document.getElementById('c-packer-ce');
+    if (ep) { ep.setAttribute('stroke','#009FAE'); }
+    const pl = document.getElementById('packer-img-label');
+    if (pl) pl.setAttribute('fill','#009FAE');
+  }
+  if (id === 'n-sql') {
+    const el = document.getElementById('c-ce-sql');
+    if (el) { el.setAttribute('stroke','#1E8C45'); el.setAttribute('stroke-width','1.8'); el.setAttribute('marker-end','url(#arr-green)'); }
+  }
+  if (id === 'n-storage') {
+    const el = document.getElementById('c-ce-st');
+    if (el) { el.setAttribute('stroke','#1E8C45'); el.setAttribute('stroke-width','1.8'); el.setAttribute('marker-end','url(#arr-green)'); }
+  }
+  if (id === 'n-pubsub') {
+    const el = document.getElementById('c-ce-ps');
+    if (el) { el.setAttribute('stroke','#E37400'); el.setAttribute('stroke-width','1.6'); el.setAttribute('marker-end','url(#arr-orange)'); }
+    const lbl = document.getElementById('async-label');
+    if (lbl) lbl.setAttribute('fill','#C37000');
+  }
+  if (id === 'n-fn') {
+    const el = document.getElementById('c-ps-fn');
+    if (el) { el.setAttribute('stroke','#1967D2'); el.setAttribute('stroke-width','1.8'); el.setAttribute('marker-end','url(#arr-blue)'); }
+  }
+}
+
+function handleSideEffect(se) {
+  if (se === 'gh') {
+    ['n-webapp','n-tf-repo','n-srv','n-gh'].forEach(id => activateNode(id));
+    ['c-webapp-gh','c-tf-gh','c-srv-gh'].forEach(cid => {
+      const el = document.getElementById(cid);
+      if (el) { el.setAttribute('stroke','#444D57'); el.setAttribute('stroke-width','1.5'); }
+    });
+  } else if (se === 'packer') {
+    activateNode('n-packer');
+    const el = document.getElementById('c-gh-packer');
+    if (el) { el.setAttribute('stroke','#009FAE'); el.setAttribute('stroke-width','1.5'); el.setAttribute('marker-end','url(#arr-teal)'); }
+  } else if (se === 'tf') {
+    activateNode('n-tfbuild');
+    activateNode('n-lb');
+    const eg = document.getElementById('c-gh-tf');
+    if (eg) { eg.setAttribute('stroke','#7B42BC'); eg.setAttribute('stroke-width','1.5'); eg.setAttribute('marker-end','url(#arr-purple)'); }
+    const et = document.getElementById('c-tf-gcp');
+    if (et) { et.setAttribute('stroke','#7B42BC'); et.setAttribute('stroke-width','1.5'); et.setAttribute('marker-end','url(#arr-purple)'); }
+    // Activate GCP boundary
+    const box = document.getElementById('vpc-box');
+    if (box) { box.setAttribute('stroke','#1967D2'); box.setAttribute('stroke-width','1.8'); box.setAttribute('fill','rgba(235,243,255,0.5)'); }
+  }
+}
+
+let tfRunning = false;
+const allTimeouts = [];
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('tf-status');
+  el.textContent = msg;
+  el.className = 'demo-status' + (cls ? ' ' + cls : '');
+}
+
+function runTf() {
+  if (tfRunning) return;
+  resetTf();
+  tfRunning = true;
+  document.getElementById('tf-btn').disabled = true;
+  document.getElementById('tf-btn').textContent = '⏳ Running...';
+  setStatus('▶ Deployment simulation running...', 'running');
+
+  const container = document.getElementById('term-lines');
+  const cursor = document.getElementById('cursor');
+  cursor.style.display = 'inline-block';
+
+  // Pre-dim all nodes
+  Object.keys(NODE_COLORS).forEach(id => {
+    const g = document.getElementById(id);
+    if (g) g.setAttribute('opacity', '0.3');
+  });
+
+  let doneCount = 0;
+  const total = TF_LINES.length;
+
+  TF_LINES.forEach(line => {
+    const tid = setTimeout(() => {
+      const div = document.createElement('div');
+      div.className = 'term-line ' + (line.cls || '');
+      div.textContent = line.text;
+      container.appendChild(div);
+      div.classList.add('show');
+      container.parentElement.scrollTop = container.parentElement.scrollHeight;
+
+      if (line.activate && line.node) activateNode(line.node);
+      if (line.se) handleSideEffect(line.se);
+
+      doneCount++;
+      if (doneCount === total) {
+        cursor.style.display = 'none';
+        setStatus('✓ Deploy complete — simulation finished', 'done');
+        document.getElementById('tf-btn').textContent = '↻ Replay simulation';
+        document.getElementById('tf-btn').disabled = false;
+        allTimeouts.length = 0;
+        tfRunning = false;
+      }
+    }, Math.round(line.t * 0.85));
+    allTimeouts.push(tid);
+  });
+}
+
+function resetTf() {
+  allTimeouts.forEach(t => clearTimeout(t));
+  allTimeouts.length = 0;
+  tfRunning = false;
+
+  document.getElementById('term-lines').innerHTML = '';
+  document.getElementById('cursor').style.display = 'none';
+
+  // Reset all nodes
+  Object.keys(NODE_STROKES).forEach(id => {
+    const g = document.getElementById(id);
+    if (g) {
+      g.setAttribute('opacity', '0.18');
+      const r = g.querySelector('rect');
+      if (r) { r.setAttribute('stroke', NODE_STROKES[id]); r.setAttribute('stroke-width', '1.5'); }
+    }
+  });
+
+  // Reset all connectors
+  ['c-webapp-gh','c-tf-gh','c-srv-gh','c-gh-packer','c-gh-tf','c-tf-gcp','c-packer-ce',
+   'c-lb-ce','c-ce-sql','c-ce-st','c-ce-ps','c-ps-fn'].forEach(cid => {
+    const el = document.getElementById(cid);
+    if (!el) return;
+    el.setAttribute('stroke','#C8D4E8');
+    el.setAttribute('stroke-width', '1.3');
+    if (el.hasAttribute('marker-end')) el.setAttribute('marker-end','url(#arr-muted)');
+  });
+  const asyncLbl = document.getElementById('async-label');
+  if (asyncLbl) asyncLbl.setAttribute('fill','#C8D4E8');
+  const pkrLbl = document.getElementById('packer-img-label');
+  if (pkrLbl) pkrLbl.setAttribute('fill','#C8D4E8');
+  const box = document.getElementById('vpc-box');
+  if (box) { box.setAttribute('stroke','#DDE4F0'); box.setAttribute('stroke-width','1.5'); box.setAttribute('fill','rgba(240,244,251,0.45)'); }
+
+  document.getElementById('tf-btn').disabled = false;
+  document.getElementById('tf-btn').textContent = '▶ Run simulation';
+  setStatus('Ready — explore the simulated deployment', '');
+}
+</script>
+</body></html>
